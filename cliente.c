@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/time.h>
 
 #define MSG_LEN (64 *1024)
 
@@ -18,9 +19,11 @@ struct sockaddr_in server_addr(int port, char *addr) {
 	return saddr;
 }
 
+struct timeval tv, tv2, res;
+
 int main(int argc, char **argv) {
 	if (argc != 5){
-		printf("uso: %s <ip_servidor> <porta_servidor> <arquivo_servidor> <arquivo_destino>\n", argv[0]);
+		printf("uso: %s <ip_servidor> <porta_servidor> <tipo_request_servidor> \n", argv[0]); //tipo_request = time para pedir sincronizar o tempo
 		return 0;
 	}
 
@@ -38,6 +41,7 @@ int main(int argc, char **argv) {
 	}
 
 	int ns, nr;
+	gettimeofday(&tv, 0);
 	ns = send(sfd, argv[3], strlen(argv[3]), 0);
 	if (ns < 0) {
 		perror("send(<arquivo_servidor>)");
@@ -45,20 +49,27 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	int cod_resp;
-	nr = recv(sfd, &cod_resp, sizeof(int), 0);
+	time_t t;
+	nr = recv(sfd, &t, sizeof(time_t), 0);
+	gettimeofday(&tv2, 0);
 	if (nr < 0) {
-		perror("recv(cod_resp)");
+		perror("recv(time)");
 		close(sfd);
 		return -1;
 	}
 
-	if (cod_resp < 0) {
-		printf("sevidor: %s\n", strerror(cod_resp*-1));
+    timersub(&tv2, &tv, &res);
+    time_t new_time = t + res.tv_sec/2;
+    res.tv_sec = new_time;
+    settimeofday(&res, 0);
+
+	if (t < 0) {
+		printf("sevidor: %s\n", strerror(t*-1));
 		close (sfd);
 		return -1;
 	}
 
+	/*
 	int fd;
 	fd = open(argv[4], O_CREAT | O_RDWR | O_APPEND, 0644);
 	if (fd < 0) {
@@ -92,6 +103,8 @@ int main(int argc, char **argv) {
 			return -1;
 		}
 	} while (nr > 0);
+	*/
+
 	close(sfd);
 	close(fd);
 	return 0;
