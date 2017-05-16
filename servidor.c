@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <sys/time.h>
 
 struct sockaddr_in set_myaddr(int port){
 	struct sockaddr_in saddr;
@@ -16,6 +17,8 @@ struct sockaddr_in set_myaddr(int port){
 	saddr.sin_addr.s_addr = INADDR_ANY;
 	return saddr;
 }
+
+struct timeval tv;
 
 #define BLOCK_SIZE (64 * 1024)
 
@@ -68,7 +71,8 @@ int main(int argc, char **argv) {
 			close(csfd);
 			continue;
 		}
-		fd = open(file_name, O_RDONLY);
+		gettimeofday(&tv, 0);
+		/*fd = open(file_name, O_RDONLY);
 		if (fd < 0) { // deu erro na abertura do aquivo solicitado
 			perror("open()");
 			cod_resp = errno * -1;
@@ -76,13 +80,14 @@ int main(int argc, char **argv) {
 				perror("send(<cod_resp>)");
 				continue;
 			}
-		} else {
-			if (send(csfd, &fd, sizeof(int), 0) < 0) {
-				perror("send(<fd>)");
-				continue;
+		} else { */
+
+		if (send(csfd, &tv.tv_sec, sizeof(time_t), 0) < 0) {
+            perror("send(<time>)");
+            continue;
 			}
 		}
-		do {
+		/*do {
 			bzero(buff, BLOCK_SIZE);
 			nr = read(fd, buff, BLOCK_SIZE);
 			if (nr < 0) {
@@ -96,7 +101,7 @@ int main(int argc, char **argv) {
 				close(csfd);
 				continue;
 			}
-		}while (nr > 0);
+		}while (nr > 0);*/
 		close(csfd);
 		close(fd);
 	}
